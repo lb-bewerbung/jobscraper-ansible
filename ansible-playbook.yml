@@ -1,0 +1,142 @@
+---
+- name: Setup and configure web servers
+  hosts: webservers
+  become: true
+  tasks:
+
+    # Install Docker
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    # Start docker service
+    - name: Ensure Docker service is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    # Install Apache
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+        update_cache: yes
+
+    # Start apache service
+    - name: Ensure Apache service is started and enabled
+      service:
+        name: apache2
+        state: started
+        enabled: true
+
+    ## Configure Apache as reverse proxy
+
+    # Enable proxy module
+    - name: Enable proxy module in Apache
+      apache2_module:
+        name: proxy
+        state: present
+
+    # Enable proxy_http module
+    - name: Enable proxy_http module in Apache
+      apache2_module:
+        name: proxy_http
+        state: present
+
+    # Enter config-text in 000-default.conf
+    - name: Update Apache configuration to use reverse proxy
+      copy:
+        dest: /etc/apache2/sites-available/000-default.conf
+        content: |
+          <VirtualHost *:80>
+              # ServerName jobscraper.example.com 
+
+              ProxyPreserveHost On
+              ProxyPass / http://127.0.0.1:8080/
+              ProxyPassReverse / http://127.0.0.1:8080/
+
+              ErrorLog ${APACHE_LOG_DIR}/myapp_error.log
+              CustomLog ${APACHE_LOG_DIR}/myapp_access.log combined
+          </VirtualHost>
+        owner: root
+        group: root
+        mode: '0644'
+
+    # Restart Apache service
+    - name: Restart Apache service
+      service:
+        name: apache2
+        state: restarted
+
+    ## Transfer and start Springboot-Docker-App 
+
+    # Install rsync
+    - name: Install rsync on the target system
+      apt:
+        name: rsync
+        state: present
+
+    # Optional
+    #
+    # - name: Install rsync on the control machine
+    #   apt:
+    #     name: rsync
+    #     state: present
+    #   delegate_to: localhost
+    #   become: false
+
+    # Install Python3-pip
+    - name: Install Python3 pip
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    # Install Python Docker SDK 
+    - name: Install Python Docker SDK
+      pip:
+        name: docker
+        state: present
+
+    # Transfer Docker image
+    - name: Synchronize Docker image from control machine to webserver
+      synchronize:
+        src: /var/jenkins_home/workspace/docker_images/springboot-app.tar
+        dest: /tmp/springboot-app.tar
+        mode: push
+
+
+    # Ansible docker module currently not working with jenkins: docker_in_docker
+    #
+    # - name: Load Docker image from tar file
+    #   docker_image:
+    #     load_path: /tmp/springboot-app.tar
+    #     name: springboot-app
+    #     state: present
+    #     source: load
+
+    # - name: Create and start Docker container from image
+    #   docker_container:
+    #     name: springboot-app-container
+    #     image: springboot-app
+    #     state: started
+    #     exposed_ports:
+    #       - 8080
+    #     published_ports:
+    #       - "127.0.0.1:8080:8080"
+
+    # Using workaround with shell-commands
+    # Not idempotent!
+    #
+    # Load Docker image into Docker engine
+    - name: Load Docker image from tar file using shell
+      shell: 
+        cmd: "docker load < /tmp/springboot-app.tar"
+      
+    # Run container
+    - name: Create and start Docker container from image using shell
+      shell:
+        cmd: "docker run -d --name springboot-app-container -p 127.0.0.1:8080:8080 springboot-app"
