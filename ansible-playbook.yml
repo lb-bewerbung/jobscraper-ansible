@@ -108,8 +108,7 @@
         dest: /tmp/springboot-app.tar
         mode: push
 
-
-    # Ansible docker module currently not working with jenkins: docker_in_docker
+  # Ansible docker module currently only working with ubuntu but not in jenkins docker_in_docker
     #
     # - name: Load Docker image from tar file
     #   docker_image:
