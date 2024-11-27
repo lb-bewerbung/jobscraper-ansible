@@ -1,5 +1,5 @@
 ## Kurzbeschreibung
-Dies sind die Installations- und Konfigurationsdaten der CI-CD-Pipeline für das Hauptrojekt (siehe <a href="https://github.com/lb-bewerbung/jobscraper-springboot">Jobscraper-Springboot</a>). 
+Dies sind die Installations- und Konfigurationsdaten von Ansible für das Hauptrojekt (siehe <a href="https://github.com/lb-bewerbung/jobscraper-springboot">Jobscraper-Springboot</a>). 
 
 ### Dateien
 1. install_ansible.sh
